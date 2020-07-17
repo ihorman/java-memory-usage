@@ -50,10 +50,14 @@ function run {
 	    	[ $debug -ne 0 ] && echo $dockerVersion
 	fi
 	port=10239
+	#Very useful JVM Dynamic Attach utility - all-in-one jmap + jstack + jcmd + jinfo functionality in a single tiny program
+	#No installed JDK required, works with just JRE, supports Linux containers. 
+	#Credits to Andrei Pangin https://github.com/apangin
 	curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
 	chmod +x /tmp/jattach
 	jattach="/tmp/jattach"
-	curl -sLo /tmp/app.jar https://github.com/siruslan/java-memory-usage/raw/master/MemoryUsageCollector.jar
+	#Simple collector of Java memory usage metrics   
+	curl -sLo /tmp/app.jar https://github.com/siruslan/java-memory-usage/raw/master/dist/MemoryUsageCollector.jar
 	jar=/tmp/app.jar
 
 	for pid in $(pgrep -l java | awk '{print $1}'); do
