@@ -53,6 +53,14 @@ function run {
 	#Very useful JVM Dynamic Attach utility - all-in-one jmap + jstack + jcmd + jinfo functionality in a single tiny program
 	#No installed JDK required, works with just JRE, supports Linux containers. 
 	#Credits to Andrei Pangin https://github.com/apangin
+	if [ -f /etc/alpine-release ]; then
+		apk add --no-cache jattach --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/
+		jattach="jattach"		
+	else
+		curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
+		chmod +x /tmp/jattach
+		jattach="/tmp/jattach"
+	fi
 	curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
 	chmod +x /tmp/jattach
 	jattach="/tmp/jattach"
@@ -194,7 +202,12 @@ function run {
 		curl -fsSL -d "user=$user&testId=$testId&hostId=$hostId&os=$os&nodeType=$nodeType&pid=$pid&osMemTotal=$osMemTotal&osMemUsed=$osMemUsed&osMemFree=$osMemFree&osMemShared=$osMemShared&osMemBuffCache=$osMemBuffCache&osMemAvail=$osMemAvail&swapTotal=$swapTotal&swapUsed=$swapUsed&swapFree=$swapFree&javaVersion=$javaVersion&options=$options&gcType=$gcType&xmx=$xmx&heapCommitted=$heapCommitted&heapUsed=$heapUsed&xms=$xms&nonHeapMax=$nonHeapMax&nonHeapCommitted=$nonHeapCommitted&nonHeapUsed=$nonHeapUsed&nonHeapInit=$nonHeapInit&nativeMemory=$nativeMemory&jvmFlags=$jvmFlags&initHeap=$initHeap&maxHeap=$maxHeap&minHeapDelta=$minHeapDelta&maxNew=$maxNew&newSize=$newSize&oldSize=$oldSize&dockerVersion=$dockerVersion&dockerUsed=$dockerUsed&dockerLimit=$dockerLimit" -X POST "https://cs.demo.jelastic.com/1.0/development/scripting/rest/eval?script=stats&appid=cc492725f550fcd637ab8a7c1f9810c9"
 		echo ""
 	done
-	rm -rf $jar $jattach
+	if [ -f /etc/alpine-release ]; then
+		apk del jattach
+		rm -rf $jar
+	else 
+		rm -rf $jar $jattach
+	fi
 }
 
 function getCtInfo {
