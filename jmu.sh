@@ -61,9 +61,6 @@ function run {
 		chmod +x /tmp/jattach
 		jattach="/tmp/jattach"
 	fi
-	curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
-	chmod +x /tmp/jattach
-	jattach="/tmp/jattach"
 	#Simple collector of Java memory usage metrics   
 	curl -sLo /tmp/app.jar https://github.com/siruslan/java-memory-usage/raw/master/dist/MemoryUsageCollector.jar
 	jar=/tmp/app.jar
