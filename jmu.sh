@@ -56,8 +56,8 @@ run () {
 	#No installed JDK required, works with just JRE, supports Linux containers. 
 	#Credits to Andrei Pangin https://github.com/apangin
 	if [ -f /etc/alpine-release ]; then
-        apk add --no-cache jattach --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/
-        apk add --no-cache procps
+        	apk add --no-cache jattach --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/
+        	apk add --no-cache procps
 		jattach="jattach"		
 	else
 		curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
