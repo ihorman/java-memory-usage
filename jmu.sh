@@ -1,6 +1,8 @@
 #!/bash/sh 
 
-function run {
+. /etc/profile
+
+run () {
 
 	user=${1:-$USER}
 	if [ -z "$user" ]; then
@@ -54,7 +56,8 @@ function run {
 	#No installed JDK required, works with just JRE, supports Linux containers. 
 	#Credits to Andrei Pangin https://github.com/apangin
 	if [ -f /etc/alpine-release ]; then
-		apk add --no-cache jattach --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/
+        apk add --no-cache jattach --repository http://dl-cdn.alpinelinux.org/alpine/edge/community/
+        apk add --no-cache procps
 		jattach="jattach"		
 	else
 		curl -sLo /tmp/jattach https://github.com/apangin/jattach/releases/download/v1.5/jattach
@@ -207,7 +210,7 @@ function run {
 	fi
 }
 
-function getCtInfo {
+getCtInfo () {
 	local pid="$1"
 
 	if [[ -z "$pid" ]]; then
@@ -236,7 +239,7 @@ function getCtInfo {
   fi
 }
 
-function toMB {
+toMB () {
 	local mb=1048576
 	local value=$1
 
