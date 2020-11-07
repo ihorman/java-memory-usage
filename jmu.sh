@@ -14,7 +14,7 @@ run () {
 		testId="Test $(date)"
 	fi
 
-	debug=${3}
+	debug=${3:-$DEBUG}
 	if [ "$debug" != "0" -a "$debug" != "false" ]; then
 		debug=1
 	else
