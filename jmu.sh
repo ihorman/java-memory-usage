@@ -1,6 +1,7 @@
 #!/bash/sh 
 
 . /etc/profile
+mucUrl="https://github.com/siruslan/java-memory-usage/raw/master/dist/MemoryUsageCollector.jar"
 
 run () {
 
@@ -65,7 +66,7 @@ run () {
 		jattach="/tmp/jattach"
 	fi
 	#Simple collector of Java memory usage metrics   
-	curl -sLo /tmp/app.jar https://github.com/siruslan/java-memory-usage/raw/master/dist/MemoryUsageCollector.jar
+    curl -sLo /tmp/app.jar $mucUrl
 	jar=/tmp/app.jar
 
 	for pid in $(pgrep -l java | awk '{print $1}'); do
@@ -78,15 +79,18 @@ run () {
 			result=$?
 		fi
 
-		if [ $(command -v docker) ]; then
+        [ $(command -v docker) ] && util=docker || util=crictl    
+
+
+        if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
 			[ $debug -ne 0 ] && echo "Collecting info about docker container limits..."
 			ctid=$(getCtInfo $pid id)
 			[ $debug -ne 0 ] && echo "ctid=$ctid"
-			st=$(docker stats $ctid --no-stream --format "{{.MemUsage}}")
+			st=$($util stats $ctid --no-stream --format "{{.MemUsage}}")
 			dockerUsed=$(echo $st | cut -d'/' -f1 | tr -s " " | xargs)
 			dockerLimit=$(echo $st | cut -d'/' -f2 | tr -s " " | xargs)
 			if [ $result -ne 0 ]; then
-				javaVersion=$(docker exec $ctid java -version 2>&1) 
+				javaVersion=$($util exec $ctid java -version 2>&1) 
 			fi
 		fi
 
@@ -139,20 +143,21 @@ run () {
 				result=$?
 				[ $debug -ne 0 ] && echo $resp
 
-				if [ $(command -v docker) ]; then
+                if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
+                    ip=$(getCtInfo $pid)
 					if [[ "$resp" == *"Failed to retrieve RMIServer stub"* ]]; then
-						ip=$(getCtInfo $pid)	
 						[ $debug -ne 0 ] && echo "java -jar $jar -h=$ip -p=$p"
 						resp=$(java -jar $jar -h=$ip -p=$p)
 						result=$?
 						[ $debug -ne 0 ] && echo $resp
 					fi
-					#If previous attempts failed then execute java -jar app.jar inside docker cotainer 
+					# If previous attempts failed then execute java -jar app.jar inside docker cotainer 
+                    # If K8s, then we have to use CRIO tools to execute command, also crictl doesn't have cp command implemented
 					if [ $result -ne 0 ]; then
-						docker cp $jar $ctid:$jar
-						resp=$(docker exec $ctid java -jar $jar -p=$p) 
+					   [ $(command -v docker)] && docker cp $jar $ctid:$jar || $util exec $ctid wget -qO /tmp/app.jar $mucUrl
+						resp=$($util exec $ctid java -jar $jar -p=$p) 
 						result=$?
-						docker exec -u 0 $ctid rm -rf $jar 
+						$util exec -u 0 $ctid rm -rf $jar 
 						[ $debug -ne 0 ] && echo $resp
 					fi
 				fi
@@ -176,7 +181,7 @@ run () {
 				fi
 				echo "Done"
 			else
-				if [ $(command -v docker) ]; then
+                if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
 					if [[ "$resp" == *"Failed to retrieve RMIServer stub"* ]]; then
 						ip=$(getCtInfo $pid)	
 						[ $debug -ne 0 ] && echo "java -jar $jar -h=$ip"
@@ -187,12 +192,13 @@ run () {
 					#If previous attempts failed then execute java -jar app.jar inside docker cotainer 
 					if [ $result -ne 0 ]; then
 						ctid=$(getCtInfo $pid id)
-						docker cp $jar $ctid:$jar
-						resp=$(docker exec $ctid java -jar $jar) 
+                        [ $(command -v docker)] && docker cp $jar $ctid:$jar || $util exec $ctid wget -qO /tmp/app.jar $mucUrl
+                        resp=$($util exec $ctid java -jar $jar)
 						result=$?
-						docker exec -u 0 $ctid rm -rf $jar 
+                        $util exec -u 0 $ctid rm -rf $jar
 						[ $debug -ne 0 ] && echo $resp
 					fi
+
 				fi
 				options="$resp"
 				echo "ERROR: can't enable JMX for pid=$pid"
@@ -222,21 +228,32 @@ getCtInfo () {
 		echo "Unable to resolve host PID to a container name."
 		exit 2
 	fi
-
-  #ps returns values potentially padded with spaces, so we pass them as they are without quoting.
-  local parentPid="$(ps -o ppid= -p $pid)"
-  local ct="$(ps -o args= -f -p $parentPid | grep containerd-shim)"
-  m="moby/"
-  if [[ -n "$ct" ]]; then
-  	local ctid=$(echo ${ct#*$m} | cut -d' ' -f1)
-  	if [ "$2" == "id" ]; then
-  		echo $ctid
-  	else
-  		docker inspect $ctid | grep IPAddress | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
-  	fi
-  else
-  	getCtInfo "$parentPid" $2
-  fi
+    if [ $(command -v docker) ]; then
+    #ps returns values potentially padded with spaces, so we pass them as they are without quoting.
+        local parentPid="$(ps -o ppid= -p $pid)"
+        local ct="$(ps -o args= -f -p $parentPid | grep containerd-shim)"
+        m="moby/"
+        if [[ -n "$ct" ]]; then
+  	        local ctid=$(echo ${ct#*$m} | cut -d' ' -f1)
+  	        if [ "$2" == "id" ]; then
+  		        echo $ctid
+  	        else
+  		        docker inspect $ctid | grep IPAddress | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+  	        fi
+        else
+  	        getCtInfo "$parentPid" $2
+        fi
+    fi
+    if [ $(command -v kubectl) ]; then
+            ct_hostname=$(nsenter -t $(pidof java | awk '{print $1}') -u hostname)
+            pod_id=$(crictl pods --name $ct_hostname | tail -1 | awk '{print $1}')
+            local ctid=$(crictl ps -a | grep $pod_id | awk '{print $1}')
+            if [ "$2" == "id" ]; then
+                echo $ctid
+            else
+            crictl inspectp --output table $pod_id |  grep "IP Addresses" |  grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+            fi
+    fi
 }
 
 toMB () {
