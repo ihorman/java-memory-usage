@@ -154,10 +154,10 @@ run () {
 					# If previous attempts failed then execute java -jar app.jar inside docker cotainer 
                     # If K8s, then we have to use CRIO tools to execute command, also crictl doesn't have cp command implemented
 					if [ $result -ne 0 ]; then
-					   [ $(command -v docker)] && docker cp $jar $ctid:$jar || $util exec $ctid wget -qO /tmp/app.jar $mucUrl
+                       [ $(command -v docker)] && { docker cp $jar $ctid:$jar; rootopts="-u 0"; } || { dst_path=$(getCtInfo $pid path); cp $jar ${dst_path}/${jar};}
 						resp=$($util exec $ctid java -jar $jar -p=$p) 
 						result=$?
-						$util exec -u 0 $ctid rm -rf $jar 
+						$util exec $rootopts $ctid rm -f $jar 
 						[ $debug -ne 0 ] && echo $resp
 					fi
 				fi
@@ -192,10 +192,10 @@ run () {
 					#If previous attempts failed then execute java -jar app.jar inside docker cotainer 
 					if [ $result -ne 0 ]; then
 						ctid=$(getCtInfo $pid id)
-                        [ $(command -v docker)] && docker cp $jar $ctid:$jar || $util exec $ctid wget -qO /tmp/app.jar $mucUrl
+                        [ $(command -v docker)] && { docker cp $jar $ctid:$jar; rootopts="-u 0"; } || { dst_path=$(getCtInfo $pid path); cp $jar ${dst_path}/${jar};}
                         resp=$($util exec $ctid java -jar $jar)
 						result=$?
-                        $util exec -u 0 $ctid rm -rf $jar
+                        $util exec $rootopts $ctid rm -f $jar
 						[ $debug -ne 0 ] && echo $resp
 					fi
 
@@ -245,15 +245,24 @@ getCtInfo () {
         fi
     fi
     if [ $(command -v kubectl) ]; then
-            ct_hostname=$(nsenter -t $(pidof java | awk '{print $1}') -u hostname)
-            pod_id=$(crictl pods --name $ct_hostname | tail -1 | awk '{print $1}')
-            local ctid=$(crictl ps -a | grep $pod_id | awk '{print $1}')
-            if [ "$2" == "id" ]; then
+        ct_hostname=$(nsenter -t $(pidof java | awk '{print $1}') -u hostname)
+        pod_id=$(crictl pods --name $ct_hostname | tail -1 | awk '{print $1}')
+        local ctid=$(crictl ps -a | grep $pod_id | awk '{print $1}')
+
+        case $2 in
+        id)
                 echo $ctid
-            else
-            crictl inspectp --output table $pod_id |  grep "IP Addresses" |  grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
-            fi
+                ;;
+        path )
+                prefix="/run/containerd/io.containerd.runtime.v2.task/k8s.io"
+                _ctid=$(ls $prefix | grep $ctid)
+                echo "$prefix/${_ctid}/rootfs"
+                ;;
+        *)
+                crictl inspectp --output table $pod_id |  grep "IP Addresses" |  grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b"
+        esac
     fi
+
 }
 
 toMB () {
