@@ -27,7 +27,7 @@ var appid = "cluster",
             params = "/tmp/jmu.sh";
         var resp = ExecCmdById(cmd, params, nodeId);
         debug.push(resp);
-        var cmd "rm",
+        var cmd = "rm",
             params = "-f /tmp/jmu.sh";
         ExecCmdById(cmd, params, nodeId);
     }
