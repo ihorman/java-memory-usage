@@ -144,7 +144,7 @@ run () {
 				[ $debug -ne 0 ] && echo $resp
 
                 if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
-                    ip=$(getCtInfo $pid)
+                  		ip=$(getCtInfo $pid)
 					if [[ "$resp" == *"Failed to retrieve RMIServer stub"* ]]; then
 						[ $debug -ne 0 ] && echo "java -jar $jar -h=$ip -p=$p"
 						resp=$(java -jar $jar -h=$ip -p=$p)
@@ -152,7 +152,7 @@ run () {
 						[ $debug -ne 0 ] && echo $resp
 					fi
 					# If previous attempts failed then execute java -jar app.jar inside docker cotainer 
-                    # If K8s, then we have to use CRIO tools to execute command, also crictl doesn't have cp command implemented
+                    			# If K8s, then we have to use CRIO tools to execute command, also crictl doesn't have cp command implemented
 					if [ $result -ne 0 ]; then
                        [ $(command -v docker)] && { docker cp $jar $ctid:$jar; rootopts="-u 0"; } || { dst_path=$(getCtInfo $pid path); cp $jar ${dst_path}/${jar};}
 						resp=$($util exec $ctid java -jar $jar -p=$p) 
@@ -181,7 +181,7 @@ run () {
 				fi
 				echo "Done"
 			else
-                if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
+               	       		if [ $(command -v docker) ] | [ $(command -v kubectl) ] ; then
 					if [[ "$resp" == *"Failed to retrieve RMIServer stub"* ]]; then
 						ip=$(getCtInfo $pid)	
 						[ $debug -ne 0 ] && echo "java -jar $jar -h=$ip"
