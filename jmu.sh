@@ -204,6 +204,46 @@ run () {
 				echo "ERROR: can't enable JMX for pid=$pid"
 			fi
 		fi
+		
+		[ $1 == "summary-only" ] && {
+                        echo "Final results:
+                        user=$user
+                        testId=$testId
+                        hostId=$hostId
+                        os=$os
+                        nodeType=$nodeType
+                        pid=$pid
+                        osMemTotal=$osMemTotal
+                        osMemUsed=$osMemUsed
+                        osMemFree=$osMemFree
+                        osMemShared=$osMemShared
+                        osMemBuffCache=$osMemBuffCache
+                        osMemAvail=$osMemAvail
+                        swapTotal=$swapTotal
+                        swapUsed=$swapUsed
+                        swapFree=$swapFree
+                        javaVersion=$javaVersion
+                        options=$options
+                        gcType=$gcType
+                        xmx=$xmx
+                        heapCommitted=$heapCommitted
+                        heapUsed=$heapUsed
+                        xms=$xms
+                        nonHeapMax=$nonHeapMax
+                        nonHeapCommitted=$nonHeapCommitted
+                        nonHeapUsed=$nonHeapUsed
+                        nonHeapInit=$nonHeapInit
+                        nativeMemory=$nativeMemory
+                        jvmFlags=$jvmFlags
+                        initHeap=$initHeap
+                        maxHeap=$maxHeap
+                        minHeapDelta=$minHeapDelta
+                        maxNew=$maxNew
+                        newSize=$newSize
+                        oldSize=$oldSize
+                        dockerVersion=$dockerVersion
+                        dockerUsed=$dockerUsed
+                        dockerLimit=$dockerLimit"; }
 
 		curl -fsSL -d "user=$user&testId=$testId&hostId=$hostId&os=$os&nodeType=$nodeType&pid=$pid&osMemTotal=$osMemTotal&osMemUsed=$osMemUsed&osMemFree=$osMemFree&osMemShared=$osMemShared&osMemBuffCache=$osMemBuffCache&osMemAvail=$osMemAvail&swapTotal=$swapTotal&swapUsed=$swapUsed&swapFree=$swapFree&javaVersion=$javaVersion&options=$options&gcType=$gcType&xmx=$xmx&heapCommitted=$heapCommitted&heapUsed=$heapUsed&xms=$xms&nonHeapMax=$nonHeapMax&nonHeapCommitted=$nonHeapCommitted&nonHeapUsed=$nonHeapUsed&nonHeapInit=$nonHeapInit&nativeMemory=$nativeMemory&jvmFlags=$jvmFlags&initHeap=$initHeap&maxHeap=$maxHeap&minHeapDelta=$minHeapDelta&maxNew=$maxNew&newSize=$newSize&oldSize=$oldSize&dockerVersion=$dockerVersion&dockerUsed=$dockerUsed&dockerLimit=$dockerLimit" -X POST "https://cs.demo.jelastic.com/1.0/development/scripting/rest/eval?script=stats&appid=cc492725f550fcd637ab8a7c1f9810c9"
 		echo ""
